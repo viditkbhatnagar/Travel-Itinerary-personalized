@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
@@ -30,7 +30,7 @@ const stepVariants = {
   }),
 };
 
-export default function PlanPage() {
+function PlanPageContent() {
   const searchParams = useSearchParams();
   const builder = useItineraryBuilder();
 
@@ -227,5 +227,13 @@ export default function PlanPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PlanPage() {
+  return (
+    <Suspense fallback={<div className="pt-24 pb-[var(--spacing-section)]"><div className="mx-auto max-w-2xl px-4 sm:px-6">Loading...</div></div>}>
+      <PlanPageContent />
+    </Suspense>
   );
 }
