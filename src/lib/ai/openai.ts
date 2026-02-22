@@ -28,10 +28,9 @@ function getClient(): OpenAI {
   return client;
 }
 
-const AI_MODEL = process.env.AI_MODEL ?? 'gpt-5.2';
-const AI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS ?? '8192', 10);
-const AI_MAX_TOKENS_ITINERARY = parseInt(process.env.AI_MAX_TOKENS_ITINERARY ?? '16384', 10);
-const AI_REASONING_EFFORT = (process.env.AI_REASONING_EFFORT ?? 'high') as 'low' | 'medium' | 'high';
+const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
+const AI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS ?? '4096', 10);
+const AI_MAX_TOKENS_ITINERARY = parseInt(process.env.AI_MAX_TOKENS_ITINERARY ?? '8192', 10);
 
 // ============================================================
 // System Prompts
@@ -337,7 +336,6 @@ export async function sendChatMessage(context: ChatContext, userMessage: string)
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: AI_MAX_TOKENS,
-    reasoning_effort: AI_REASONING_EFFORT,
     messages: buildMessages(fullSystem, conversationMessages),
   });
 
@@ -381,7 +379,6 @@ export async function streamChatMessage(
         const openaiStream = await openai.chat.completions.create({
           model: AI_MODEL,
           max_completion_tokens: AI_MAX_TOKENS,
-          reasoning_effort: AI_REASONING_EFFORT,
           messages: buildMessages(fullSystem, conversationMessages),
           stream: true,
         });
@@ -493,7 +490,6 @@ Output ONLY the JSON object.`;
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: AI_MAX_TOKENS_ITINERARY,
-    reasoning_effort: AI_REASONING_EFFORT,
     messages: buildMessages(systemWithContext, [{ role: 'user', content: userRequest }]),
   });
 
@@ -628,7 +624,6 @@ Output ONLY a JSON array of up to 10 recommendations:
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: 1024,
-    reasoning_effort: AI_REASONING_EFFORT,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -672,8 +667,7 @@ Output format: ["tag1", "tag2", ...]`;
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 256,
-    reasoning_effort: 'low',
+    max_completion_tokens: 1024,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -726,7 +720,6 @@ Return JSON:
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: 1024,
-    reasoning_effort: AI_REASONING_EFFORT,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -922,7 +915,6 @@ Return ONLY valid JSON with this structure:
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: 2048,
-    reasoning_effort: AI_REASONING_EFFORT,
     messages: [
       {
         role: 'system',
