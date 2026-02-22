@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { SectionHeader } from '@/components/shared/section-header';
 import { ScrollReveal } from '@/components/shared/scroll-reveal';
+import { LogoutButton } from '@/components/profile/logout-button';
 
 export const metadata: Metadata = {
   title: 'My Profile',
@@ -86,12 +87,15 @@ export default async function ProfilePage() {
               </div>
 
               {/* Edit button */}
-              <Button variant="outline" size="sm" asChild className="shrink-0">
-                <Link href="#">
-                  <Settings className="h-4 w-4 mr-1.5" />
-                  Edit Profile
-                </Link>
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="#">
+                    <Settings className="h-4 w-4 mr-1.5" />
+                    Edit Profile
+                  </Link>
+                </Button>
+                <LogoutButton />
+              </div>
             </div>
           </div>
         </ScrollReveal>
