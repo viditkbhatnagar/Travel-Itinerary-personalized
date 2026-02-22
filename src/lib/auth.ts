@@ -6,7 +6,19 @@ import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: {
+    ...PrismaAdapter(prisma),
+    createUser: async (data) => {
+      return prisma.user.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          avatarUrl: data.image,
+          emailVerified: data.emailVerified,
+        },
+      });
+    },
+  },
 
   session: {
     strategy: 'jwt',
