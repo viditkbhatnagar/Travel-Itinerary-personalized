@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { fadeUp, staggerContainer, tapSpring } from '@/lib/animations';
 import { TRAVEL_STYLES, PACE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface StepStyleProps {
   travelStyle: string;
@@ -40,7 +41,7 @@ export function StepStyle({ travelStyle, pace, onStyleChange, onPaceChange }: St
                   : 'neu-raised hover:shadow-card-hover'
               )}
             >
-              <span className="text-2xl mb-2 block">{style.icon}</span>
+              <AnimatedIcon name={style.icon} variant="card" selected={travelStyle === style.value} className="mb-2" />
               <p className="text-sm font-semibold text-midnight">{style.label}</p>
               <p className="text-xs text-stone mt-0.5 line-clamp-2">{style.description}</p>
             </motion.button>
@@ -66,7 +67,7 @@ export function StepStyle({ travelStyle, pace, onStyleChange, onPaceChange }: St
                   : 'neu-raised hover:shadow-card-hover'
               )}
             >
-              <span className="text-2xl mb-1 block">{opt.icon}</span>
+              <AnimatedIcon name={opt.icon} variant="card" selected={pace === opt.value} className="mb-1" />
               <p className="text-sm font-semibold text-midnight">{opt.label}</p>
               <p className="text-[11px] text-stone mt-0.5">{opt.description}</p>
             </motion.button>

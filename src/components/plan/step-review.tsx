@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { MapPin, Calendar, Clock, Users, Wallet, Heart, Sparkles, Pencil } from 'lucide-react';
 import { fadeUp, staggerContainer, tapSpring } from '@/lib/animations';
+import { DynamicIcon } from '@/components/ui/dynamic-icon';
 import {
   TRAVEL_STYLES,
   PACE_OPTIONS,
@@ -77,10 +78,9 @@ export function StepReview({
   const styleName = TRAVEL_STYLES.find((s) => s.value === travelStyle)?.label ?? travelStyle;
   const paceName = PACE_OPTIONS.find((p) => p.value === pace)?.label ?? pace;
   const companionName = COMPANION_OPTIONS.find((c) => c.value === companionType)?.label ?? companionType;
-  const interestNames = interests
+  const interestItems = interests
     .map((i) => INTEREST_TAGS.find((t) => t.value === i))
-    .filter(Boolean)
-    .map((t) => `${t!.icon} ${t!.label}`);
+    .filter(Boolean);
   const dietaryNames = dietaryPreferences
     .map((d) => DIETARY_OPTIONS.find((o) => o.value === d)?.label)
     .filter(Boolean);
@@ -166,12 +166,13 @@ export function StepReview({
           label="Interests"
           value={
             <div className="flex flex-wrap gap-1.5 mt-0.5">
-              {interestNames.map((name) => (
+              {interestItems.map((tag) => (
                 <span
-                  key={name}
-                  className="inline-flex items-center rounded-full bg-forest/10 px-2.5 py-0.5 text-xs font-medium text-forest"
+                  key={tag!.value}
+                  className="inline-flex items-center gap-1 rounded-full bg-forest/10 px-2.5 py-0.5 text-xs font-medium text-forest"
                 >
-                  {name}
+                  <DynamicIcon name={tag!.icon} className="h-3 w-3" />
+                  {tag!.label}
                 </span>
               ))}
             </div>

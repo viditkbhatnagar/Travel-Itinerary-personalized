@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MapPin, Clock, IndianRupee, Camera, Utensils, Bus } from 'lucide-react';
+import { MapPin, Clock, IndianRupee, Camera, Utensils, Bus, Sun, CloudSun, Moon } from 'lucide-react';
 import { fadeUp, staggerContainer } from '@/lib/animations';
 import { formatINR } from '@/lib/utils';
 
@@ -34,19 +34,19 @@ interface EnhancedDayViewProps {
 const SLOT_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; border: string }> = {
   morning: {
     label: 'Morning',
-    icon: <span className="text-amber-500">☀️</span>,
+    icon: <Sun className="h-4 w-4 text-amber-500" />,
     color: 'bg-amber-50',
     border: 'border-l-amber-400',
   },
   afternoon: {
     label: 'Afternoon',
-    icon: <span className="text-blue-500">🌤️</span>,
+    icon: <CloudSun className="h-4 w-4 text-blue-500" />,
     color: 'bg-blue-50',
     border: 'border-l-blue-400',
   },
   evening: {
     label: 'Evening',
-    icon: <span className="text-purple-500">🌙</span>,
+    icon: <Moon className="h-4 w-4 text-purple-500" />,
     color: 'bg-purple-50',
     border: 'border-l-purple-400',
   },

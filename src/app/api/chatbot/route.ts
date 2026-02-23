@@ -57,7 +57,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       data: {
         sessionId: session.id,
         role: 'assistant',
-        content: `Namaste! 🙏 I'm your Trails and Miles Smart Travel Assistant. I'm here to help you plan the perfect trip — personalized for Indian travellers like you.
+        content: `Namaste! I'm your Trails and Miles Smart Travel Assistant. I'm here to help you plan the perfect trip — personalized for Indian travellers like you.
 
 Tell me where you'd like to go, and I'll help you with:
 • **Itinerary planning** with day-wise activities
@@ -66,7 +66,7 @@ Tell me where you'd like to go, and I'll help you with:
 • **Vegetarian food** options and restaurants
 • **Practical tips** on SIM cards, local transport, and more
 
-So, where are you dreaming of travelling? 🌏`,
+So, where are you dreaming of travelling?`,
       },
     });
 

@@ -5,6 +5,7 @@ import { fadeUp, staggerContainer, tapSpring } from '@/lib/animations';
 import { COMPANION_OPTIONS, DIETARY_OPTIONS, BUDGET_RANGE, getBudgetTierLabel } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { formatINR } from '@/lib/utils';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface StepCompanionsProps {
   companionType: string;
@@ -63,7 +64,7 @@ export function StepCompanions({
                   : 'neu-raised hover:shadow-card-hover'
               )}
             >
-              <span className="text-2xl mb-2 block">{opt.icon}</span>
+              <AnimatedIcon name={opt.icon} variant="card" selected={companionType === opt.value} className="mb-2" />
               <p className="text-sm font-semibold text-midnight">{opt.label}</p>
               <p className="text-xs text-stone mt-0.5">{opt.description}</p>
             </motion.button>
@@ -121,7 +122,7 @@ export function StepCompanions({
                   : 'neu-raised text-midnight hover:shadow-card-hover'
               )}
             >
-              <span className="mr-1.5">{opt.icon}</span>
+              <AnimatedIcon name={opt.icon} variant="inline" selected={dietaryPreferences.includes(opt.value)} className="mr-1" />
               {opt.label}
             </motion.button>
           ))}

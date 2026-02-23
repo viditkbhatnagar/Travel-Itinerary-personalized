@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Outfit, Playfair_Display, JetBrains_Mono } from 'next/font/google';
+import { GlassFilter } from '@/components/ui/glass-filter';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} font-sans`}
       >
+        <GlassFilter />
         <Providers>{children}</Providers>
       </body>
     </html>

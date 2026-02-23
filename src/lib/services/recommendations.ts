@@ -219,13 +219,19 @@ export async function getRecommendations(
         )
         .join('\n');
 
-      const aiRecs = await generateUltraRecommendations(
-        profileContext,
-        historyContext,
-        behaviorContext,
-        destinationsContext,
-        currentMonth
-      );
+      // 15s timeout — if AI is slow, fall back to layers 1-5 (caught by try-catch below)
+      const aiRecs = await Promise.race([
+        generateUltraRecommendations(
+          profileContext,
+          historyContext,
+          behaviorContext,
+          destinationsContext,
+          currentMonth
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('AI recommendation timeout (15s)')), 15_000)
+        ),
+      ]);
 
       if (aiRecs.length > 0) {
         results = mergeAIRecommendations(results, aiRecs);

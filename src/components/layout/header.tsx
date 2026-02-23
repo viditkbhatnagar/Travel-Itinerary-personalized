@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useTheme } from 'next-themes';
-import { Search, Menu, Sun, Moon, User } from 'lucide-react';
+
+import { Menu, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
@@ -20,8 +20,7 @@ const navLinks = [
 
 export function Header() {
   const { data: session } = useSession();
-  const { theme, setTheme } = useTheme();
-  const { toggleSearch, toggleMobileNav } = useUIStore();
+  const { toggleMobileNav } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -29,17 +28,6 @@ export function Header() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        toggleSearch();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSearch]);
 
   return (
     <motion.header
@@ -68,26 +56,6 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSearch}
-              className="flex items-center gap-2 h-9 px-3 rounded-xl text-sm text-stone hover:text-midnight hover:bg-sand-200/50 transition-colors"
-              aria-label="Search"
-            >
-              <Search className="h-[18px] w-[18px]" strokeWidth={1.5} />
-              <span className="hidden sm:inline text-xs text-stone/60">
-                <kbd className="font-mono">⌘K</kbd>
-              </span>
-            </button>
-
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="h-9 w-9 flex items-center justify-center rounded-xl text-stone hover:text-midnight hover:bg-sand-200/50 transition-colors"
-              aria-label="Toggle theme"
-            >
-              <Sun className="h-[18px] w-[18px] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" strokeWidth={1.5} />
-              <Moon className="absolute h-[18px] w-[18px] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" strokeWidth={1.5} />
-            </button>
-
             {session ? (
               <Link
                 href="/profile"

@@ -1,65 +1,38 @@
-import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { getVisaEntries } from '@/lib/data/visa';
-import { SectionHeader } from '@/components/shared/section-header';
-import { ScrollReveal } from '@/components/shared/scroll-reveal';
-import { VisaBadge } from '@/components/shared/visa-badge';
+import { VisaGlanceAnimated } from './visa-glance-animated';
 
-const visaOrder = ['VISA_FREE', 'VISA_ON_ARRIVAL', 'E_VISA', 'EMBASSY_VISA'];
-const visaEmoji: Record<string, string> = {
-  VISA_FREE: '🟢',
-  VISA_ON_ARRIVAL: '🟡',
-  E_VISA: '🔵',
-  EMBASSY_VISA: '🔴',
+const visaPriority: Record<string, number> = {
+  VISA_FREE: 0,
+  VISA_ON_ARRIVAL: 1,
+  E_VISA: 2,
+  EMBASSY_VISA: 3,
 };
 
 export async function VisaGlance() {
   const entries = await getVisaEntries();
 
-  const grouped = visaOrder.map((type) => ({
-    type,
-    entries: entries.filter((e) => e.visaType === type),
-  }));
+  const flatEntries = entries
+    .map((e) => ({
+      id: e.id,
+      visaType: e.visaType,
+      fees: e.fees as { inrApprox?: number } | null,
+      country: {
+        name: e.country.name,
+        slug: e.country.slug,
+        heroImageUrl: e.country.heroImageUrl,
+      },
+    }))
+    .sort((a, b) => {
+      const pa = visaPriority[a.visaType] ?? 99;
+      const pb = visaPriority[b.visaType] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return a.country.name.localeCompare(b.country.name);
+    });
 
   return (
     <section className="py-[var(--spacing-section)] px-4">
       <div className="mx-auto max-w-7xl">
-        <ScrollReveal>
-          <SectionHeader
-            title="Visa at a Glance"
-            subtitle="Visa requirements for Indian passport holders"
-            viewAllHref="/visa"
-            viewAllLabel="Full Visa Hub"
-          />
-        </ScrollReveal>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {grouped.map(({ type, entries: items }, i) => (
-            <ScrollReveal key={type} delay={i * 0.1}>
-              <div className="neu-raised p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{visaEmoji[type]}</span>
-                  <VisaBadge visaType={type} size="sm" />
-                </div>
-                <ul className="space-y-2">
-                  {items.map((entry) => {
-                    const fees = entry.fees as { inrApprox?: number } | null;
-                    return (
-                      <li key={entry.id} className="flex items-center justify-between text-sm">
-                        <Link href={`/visa/${entry.country.slug}`} className="text-midnight hover:text-forest transition-colors">
-                          {entry.country.name}
-                        </Link>
-                        {fees?.inrApprox !== undefined && fees.inrApprox > 0 && (
-                          <span className="font-mono text-xs text-stone">₹{fees.inrApprox.toLocaleString('en-IN')}</span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </ScrollReveal>
-          ))}
-        </div>
+        <VisaGlanceAnimated entries={flatEntries} />
       </div>
     </section>
   );

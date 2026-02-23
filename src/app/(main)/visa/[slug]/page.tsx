@@ -6,7 +6,7 @@ import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { ScrollReveal } from '@/components/shared/scroll-reveal';
 import { VisaBadge } from '@/components/shared/visa-badge';
 import { CheckCircle2, XCircle, AlertTriangle, Lightbulb, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MetalButton } from '@/components/ui/metal-button';
 
 interface Props { params: Promise<{ slug: string }>; }
 
@@ -111,11 +111,9 @@ export default async function VisaDetailPage({ params }: Props) {
         {visa.applicationUrl && (
           <ScrollReveal>
             <div className="text-center py-8">
-              <Button size="lg" asChild>
-                <a href={visa.applicationUrl} target="_blank" rel="noopener noreferrer">
-                  Apply Now <ExternalLink className="h-4 w-4 ml-1" />
-                </a>
-              </Button>
+              <MetalButton variant="gold" href={visa.applicationUrl} external>
+                Apply Now <ExternalLink className="h-4 w-4 ml-1" />
+              </MetalButton>
             </div>
           </ScrollReveal>
         )}

@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { getCityBySlug } from '@/lib/data/destinations';
-import { resolveImage, getCityImage } from '@/lib/unsplash';
+import { resolveImage, getCityImage, getCityGalleryAsync, getPOIImageAsync } from '@/lib/unsplash';
 import { formatINR } from '@/lib/utils';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { HeroCarousel } from '@/components/shared/hero-carousel';
 import { POICard } from '@/components/shared/poi-card';
 import { ScrollReveal } from '@/components/shared/scroll-reveal';
 import { SectionHeader } from '@/components/shared/section-header';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Utensils, Bus } from 'lucide-react';
+import { Shield, Utensils, Bus, Leaf } from 'lucide-react';
 
 interface Props {
   params: Promise<{ slug: string; citySlug: string }>;
@@ -31,34 +31,48 @@ export default async function CityPage({ params }: Props) {
   if (!city) notFound();
 
   const heroImage = resolveImage(city.heroImageUrl, getCityImage(citySlug));
+  const galleryImages = await getCityGalleryAsync(city.name, citySlug, city.country.name);
+  const heroImages = galleryImages.length > 0 ? galleryImages : [heroImage];
   const food = city.foodHighlights as { mustTry?: string[]; vegetarianOptions?: string[]; indianFoodAvailable?: boolean } | null;
   const transport = city.localTransport as Record<string, unknown> | null;
   const pois = city.pointsOfInterest ?? [];
   const categories = [...new Set(pois.map((p) => p.category))];
 
+  // Resolve POI images via Unsplash API (parallel)
+  const poiImageResults = await Promise.all(
+    pois.map(async (poi) => {
+      const apiImage = await getPOIImageAsync(poi.name, city.name, poi.slug);
+      return { id: poi.id, imageUrl: apiImage };
+    }),
+  );
+  const poiImageMap = new Map(poiImageResults.map((r) => [r.id, r.imageUrl]));
+
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-[40vh] min-h-[350px]">
-        <Image src={heroImage} alt={city.name} fill priority sizes="100vw" className="object-cover" />
-        <div className="absolute inset-0 gradient-hero" />
-        <div className="absolute inset-0 flex flex-col justify-end pb-10 px-4">
-          <div className="mx-auto max-w-7xl w-full">
-            <Breadcrumb
-              items={[
-                { label: 'Destinations', href: '/destinations' },
-                { label: city.country.name, href: `/destinations/${countrySlug}` },
-                { label: city.name },
-              ]}
-              className="mb-4 text-white/70 [&_a]:text-white/70 [&_a:hover]:text-white"
-            />
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-white">{city.name}</h1>
-            {city.avgDailyBudgetINR && (
-              <p className="mt-2 text-white/70">Average daily budget: <span className="font-mono text-white">{formatINR(city.avgDailyBudgetINR)}</span></p>
-            )}
+      <HeroCarousel
+        images={heroImages}
+        alt={city.name}
+        height="h-[40vh] min-h-[350px]"
+        overlay={
+          <div className="absolute inset-0 z-[3] flex flex-col justify-end pb-10 px-4">
+            <div className="mx-auto max-w-7xl w-full">
+              <Breadcrumb
+                items={[
+                  { label: 'Destinations', href: '/destinations' },
+                  { label: city.country.name, href: `/destinations/${countrySlug}` },
+                  { label: city.name },
+                ]}
+                className="mb-4 text-white/70 [&_a]:text-white/70 [&_a:hover]:text-white"
+              />
+              <h1 className="font-display text-4xl sm:text-5xl font-bold text-white">{city.name}</h1>
+              {city.avgDailyBudgetINR && (
+                <p className="mt-2 text-white/70">Average daily budget: <span className="font-mono text-white">{formatINR(city.avgDailyBudgetINR)}</span></p>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="mx-auto max-w-7xl px-4 py-[var(--spacing-section-sm)]">
         {/* Description */}
@@ -83,22 +97,20 @@ export default async function CityPage({ params }: Props) {
               {categories.map((cat) => (
                 <TabsContent key={cat} value={cat}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pois.filter((p) => p.category === cat).map((poi) => {
-                      const imgs = poi.images as string[] | null;
-                      return (
+                    {pois.filter((p) => p.category === cat).map((poi) => (
                         <POICard
                           key={poi.id}
                           name={poi.name}
+                          slug={poi.slug}
                           category={poi.category}
                           subcategory={poi.subcategory}
                           shortDescription={poi.shortDescription}
-                          heroImageUrl={imgs?.[0] ?? null}
+                          heroImageUrl={poiImageMap.get(poi.id) ?? null}
                           avgDurationMins={poi.avgDurationMins ?? 0}
                           avgCostINR={Number(poi.avgCostINR ?? 0)}
                           bestTimeToVisit={poi.bestTimeToVisit}
                         />
-                      );
-                    })}
+                    ))}
                   </div>
                 </TabsContent>
               ))}
@@ -128,7 +140,7 @@ export default async function CityPage({ params }: Props) {
                 {food.vegetarianOptions && food.vegetarianOptions.length > 0 && (
                   <div className="neu-raised p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <span className="text-lg">🟢</span>
+                      <Leaf className="h-5 w-5 text-emerald-500" />
                       <h3 className="font-display text-lg font-semibold">Vegetarian Options</h3>
                     </div>
                     <ul className="space-y-2">

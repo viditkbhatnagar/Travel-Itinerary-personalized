@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
 import { itinerariesQuerySchema, itineraryBodySchema } from '@/lib/validators';
@@ -11,7 +11,7 @@ import {
   requireAuth,
   optionalAuth,
 } from '@/lib/api-utils';
-import { generateItinerary, buildDestinationContext, generateDestinationContext } from '@/lib/ai/openai';
+import { generateItineraryStreaming, buildDestinationContext } from '@/lib/ai/openai';
 import type { GeneratedItinerary } from '@/types';
 
 // GET /api/itineraries
@@ -54,7 +54,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   return paginated(itineraries, total, page, limit);
 });
 
-// POST /api/itineraries
+// POST /api/itineraries — SSE streaming for AI generation
 async function postHandler(req: NextRequest) {
   const user = await requireAuth(req);
 
@@ -89,176 +89,185 @@ async function postHandler(req: NextRequest) {
     return success(itinerary, 201);
   }
 
-  // AI-powered generation
+  // AI-powered generation — return SSE stream to prevent Vercel timeout
   const generateData = data as Extract<typeof data, { generate: true }>;
+  const encoder = new TextEncoder();
 
-  // Fetch user profile and travel history for personalization
-  const [travelProfile, travelHistory] = await Promise.all([
-    prisma.travelProfile.findUnique({ where: { userId: user.id } }),
-    prisma.travelHistory.findMany({
-      where: { userId: user.id },
-      include: {
-        destination: { include: { region: true } },
-        city: true,
-      },
-      orderBy: { tripDate: 'desc' },
-      take: 20,
-    }),
-  ]);
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: string) => {
+        controller.enqueue(encoder.encode(`data: ${event}\n\n`));
+      };
 
-  // Build RAG context from destination database
-  const destinationData = await prisma.country.findMany({
-    where: {
-      slug: { in: generateData.destinationSlugs },
-      status: 'PUBLISHED',
-    },
-    include: {
-      cities: {
-        where: { status: 'PUBLISHED' },
-        include: {
-          pointsOfInterest: {
-            where: { status: 'PUBLISHED' },
-            select: {
-              name: true,
-              slug: true,
-              category: true,
-              avgCostINR: true,
-              avgDurationMins: true,
-              tags: true,
+      try {
+        // Stage 1: Fetch user profile and destination context
+        send(JSON.stringify({ stage: 'context', message: 'Loading destination data...' }));
+
+        const [travelProfile, travelHistory, destinationData] = await Promise.all([
+          prisma.travelProfile.findUnique({ where: { userId: user.id } }),
+          prisma.travelHistory.findMany({
+            where: { userId: user.id },
+            include: {
+              destination: { include: { region: true } },
+              city: true,
             },
-            take: 15,
+            orderBy: { tripDate: 'desc' },
+            take: 20,
+          }),
+          prisma.country.findMany({
+            where: {
+              slug: { in: generateData.destinationSlugs },
+              status: 'PUBLISHED',
+            },
+            include: {
+              cities: {
+                where: { status: 'PUBLISHED' },
+                include: {
+                  pointsOfInterest: {
+                    where: { status: 'PUBLISHED' },
+                    select: {
+                      name: true,
+                      slug: true,
+                      category: true,
+                      avgCostINR: true,
+                      avgDurationMins: true,
+                      tags: true,
+                    },
+                    take: 15,
+                  },
+                },
+                take: 5,
+              },
+              visaInfo: {
+                where: { status: 'PUBLISHED' },
+                select: { visaType: true, fees: true, processingTimeDays: true },
+              },
+            },
+          }),
+        ]);
+
+        // Build context from known destinations (DB data — fast, no AI call)
+        const knownSlugs = new Set(destinationData.map((d) => d.slug));
+        const unknownSlugs = generateData.destinationSlugs.filter((s) => !knownSlugs.has(s));
+
+        const knownDestinationContext = destinationData
+          .map((country) =>
+            buildDestinationContext({
+              countryName: country.name,
+              cities: country.cities.map((city) => ({
+                name: city.name,
+                avgDailyBudgetINR: city.avgDailyBudgetINR,
+                foodHighlights: city.foodHighlights,
+                tags: city.tags,
+                pois: city.pointsOfInterest.map((p) => ({
+                  name: p.name,
+                  slug: p.slug,
+                  category: p.category,
+                  avgCostINR: p.avgCostINR ? Number(p.avgCostINR) : null,
+                  avgDurationMins: p.avgDurationMins,
+                  tags: p.tags,
+                })),
+              })),
+              visaInfo: country.visaInfo,
+            })
+          )
+          .join('\n\n');
+
+        // For unknown destinations: use a lightweight text hint instead of an expensive AI call
+        const unknownHint = unknownSlugs.length > 0
+          ? `\n\n=== ADDITIONAL DESTINATIONS (not in database) ===\nUser also wants to visit: ${unknownSlugs.map((s) => s.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}.\nUse your knowledge to include these destinations in the itinerary.\n=== END ===`
+          : '';
+
+        const finalDestinationContext = (knownDestinationContext + unknownHint) ||
+          `=== DESTINATION CONTEXT ===\nUser wants to visit: ${generateData.destinationSlugs.join(', ')}\nDestination not in database — use your knowledge to create a comprehensive itinerary.\n=== END DESTINATION CONTEXT ===`;
+
+        // Stage 2: Generate itinerary via streaming OpenAI call
+        send(JSON.stringify({ stage: 'generating', message: 'AI is crafting your itinerary...' }));
+
+        const generated: GeneratedItinerary = await generateItineraryStreaming(
+          {
+            destinationSlugs: generateData.destinationSlugs,
+            durationDays: generateData.durationDays,
+            travelStyle: generateData.travelStyle,
+            pace: generateData.pace,
+            companionType: generateData.companionType,
+            interests: generateData.interests,
+            budgetTotalINR: generateData.budgetTotalINR,
+            dietaryPreferences: generateData.dietaryPreferences,
+            userProfile: travelProfile,
+            travelHistory: travelHistory as Parameters<typeof generateItineraryStreaming>[0]['travelHistory'],
+            destinationContext: finalDestinationContext,
           },
-        },
-        take: 5,
-      },
-      visaInfo: {
-        where: { status: 'PUBLISHED' },
-        select: { visaType: true, fees: true, processingTimeDays: true },
-      },
-    },
-  });
+          send
+        );
 
-  // Identify known and unknown destinations
-  const knownSlugs = new Set(destinationData.map((d) => d.slug));
-  const unknownSlugs = generateData.destinationSlugs.filter((s) => !knownSlugs.has(s));
+        // Stage 3: Save to database
+        send(JSON.stringify({ stage: 'saving', message: 'Saving your itinerary...' }));
 
-  // Build context for known destinations from database
-  const knownDestinationContext = destinationData
-    .map((country) =>
-      buildDestinationContext({
-        countryName: country.name,
-        cities: country.cities.map((city) => ({
-          name: city.name,
-          avgDailyBudgetINR: city.avgDailyBudgetINR,
-          foodHighlights: city.foodHighlights,
-          tags: city.tags,
-          pois: city.pointsOfInterest.map((p) => ({
-            name: p.name,
-            slug: p.slug,
-            category: p.category,
-            avgCostINR: p.avgCostINR ? Number(p.avgCostINR) : null,
-            avgDurationMins: p.avgDurationMins,
-            tags: p.tags,
-          })),
-        })),
-        visaInfo: country.visaInfo,
-      })
-    )
-    .join('\n\n');
-
-  // Generate AI context for unknown destinations
-  let unknownDestinationContext = '';
-  if (unknownSlugs.length > 0) {
-    const unknownContexts = await Promise.all(
-      unknownSlugs.map(async (slug) => {
-        try {
-          const displayName = slug
-            .split('-')
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-          return await generateDestinationContext(displayName, generateData.durationDays);
-        } catch (error) {
-          console.warn(`[Itinerary] Failed to generate context for ${slug}:`, error);
-          return '';
-        }
-      })
-    );
-    unknownDestinationContext = unknownContexts.filter(Boolean).join('\n\n');
-  }
-
-  const destinationContext = [knownDestinationContext, unknownDestinationContext]
-    .filter(Boolean)
-    .join('\n\n');
-
-  // Fallback context if all destinations are unknown and AI generation failed
-  const finalDestinationContext = destinationContext || 
-    `=== DESTINATION CONTEXT ===
-User wants to visit: ${generateData.destinationSlugs.join(', ')}
-Destination not in database - AI will generate recommendations based on general knowledge.
-The AI should use its knowledge to create a comprehensive itinerary.
-=== END DESTINATION CONTEXT ===`;
-
-  // Call Claude to generate itinerary
-  const generated: GeneratedItinerary = await generateItinerary({
-    destinationSlugs: generateData.destinationSlugs,
-    durationDays: generateData.durationDays,
-    travelStyle: generateData.travelStyle,
-    pace: generateData.pace,
-    companionType: generateData.companionType,
-    interests: generateData.interests,
-    budgetTotalINR: generateData.budgetTotalINR,
-    dietaryPreferences: generateData.dietaryPreferences,
-    userProfile: travelProfile,
-    travelHistory: travelHistory as Parameters<typeof generateItinerary>[0]['travelHistory'],
-    destinationContext: finalDestinationContext,
-  });
-
-  // Save to database with nested days and items
-  const itinerary = await prisma.itinerary.create({
-    data: {
-      userId: user.id,
-      title: generated.title,
-      description: generated.description,
-      destinationSlugs: generated.destinationSlugs,
-      durationDays: generated.durationDays,
-      travelStyle: generated.travelStyle,
-      pace: generated.pace,
-      companionType: generated.companionType,
-      budgetTotalINR: generated.budgetTotalINR,
-      interests: generateData.interests ?? [],
-      isAiGenerated: true,
-      status: 'DRAFT',
-      days: {
-        create: generated.days.map((day) => ({
-          dayNumber: day.dayNumber,
-          title: day.title,
-          description: day.description,
-          dailyBudgetINR: day.dailyBudgetINR,
-          weatherAdvisory: day.weatherAdvisory ?? null,
-          items: {
-            create: day.items.map((item, idx) => ({
-              timeSlot: item.timeSlot,
-              startTime: item.startTime ?? null,
-              endTime: item.endTime ?? null,
-              title: item.title,
-              description: item.description,
-              estimatedCostINR: item.estimatedCostINR,
-              transportMode: item.transportMode ?? null,
-              transportDurationMins: item.transportDurationMins ?? null,
-              transportNotes: item.transportNotes ?? null,
-              tags: item.tags,
-              sortOrder: idx,
-            })),
+        const itinerary = await prisma.itinerary.create({
+          data: {
+            userId: user.id,
+            title: generated.title,
+            description: generated.description,
+            destinationSlugs: generated.destinationSlugs,
+            durationDays: generated.durationDays,
+            travelStyle: generated.travelStyle,
+            pace: generated.pace,
+            companionType: generated.companionType,
+            budgetTotalINR: generated.budgetTotalINR,
+            interests: generateData.interests ?? [],
+            isAiGenerated: true,
+            status: 'DRAFT',
+            days: {
+              create: generated.days.map((day) => ({
+                dayNumber: day.dayNumber,
+                title: day.title,
+                description: day.description,
+                dailyBudgetINR: day.dailyBudgetINR,
+                weatherAdvisory: day.weatherAdvisory ?? null,
+                items: {
+                  create: day.items.map((item, idx) => ({
+                    timeSlot: item.timeSlot,
+                    startTime: item.startTime ?? null,
+                    endTime: item.endTime ?? null,
+                    title: item.title,
+                    description: item.description,
+                    estimatedCostINR: item.estimatedCostINR,
+                    transportMode: item.transportMode ?? null,
+                    transportDurationMins: item.transportDurationMins ?? null,
+                    transportNotes: item.transportNotes ?? null,
+                    tags: item.tags,
+                    sortOrder: idx,
+                  })),
+                },
+              })),
+            },
           },
-        })),
-      },
-    },
-    include: {
-      days: { include: { items: true, city: true }, orderBy: { dayNumber: 'asc' } },
+          include: {
+            days: { include: { items: true, city: true }, orderBy: { dayNumber: 'asc' } },
+          },
+        });
+
+        // Stage 4: Done — send the final itinerary
+        send(JSON.stringify({ stage: 'done', data: itinerary }));
+        controller.close();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Itinerary generation failed';
+        send(JSON.stringify({ stage: 'error', message }));
+        controller.close();
+      }
     },
   });
 
-  return success(itinerary, 201);
+  // Cast to NextResponse to satisfy withErrorHandler type
+  // (NextResponse extends Response — the cast is safe for SSE streams)
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  }) as unknown as NextResponse;
 }
 
 export const POST = withRateLimit(

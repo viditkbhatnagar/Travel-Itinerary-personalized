@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Check, Sparkles, MapPin, LogIn } from 'lucide-react';
+import { Loader2, Check, Sparkles, MapPin, LogIn, AlertCircle } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import { GENERATION_STAGES } from '@/lib/constants';
 
@@ -59,7 +59,7 @@ export function GenerationProgress({
         className="flex flex-col items-center justify-center py-16 px-4"
       >
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 mb-4">
-          <span className="text-3xl">😔</span>
+          <AlertCircle className="h-8 w-8 text-red-400" />
         </div>
         <h3 className="font-display text-xl font-bold text-midnight mb-2">
           {isAuthError ? 'Sign in required' : 'Something went wrong'}

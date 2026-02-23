@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, MapPin, AlertCircle, Sparkles, Globe, Check, X } from 'lucide-react';
+import { Search, MapPin, AlertCircle, Sparkles, Globe, Check, X, Compass, Building2, Landmark } from 'lucide-react';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 import { fadeUp, staggerContainer, tapSpring } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 
@@ -126,24 +127,24 @@ export function StepDestination({ selectedSlugs, selectedName, onSelect }: StepD
     }
   };
 
-  const getRegionEmoji = (regionSlug: string) => {
+  const getRegionIcon = (regionSlug: string): string => {
     switch (regionSlug) {
       case 'domestic-india':
-        return '🇮🇳';
+        return 'map-pin';
       case 'east-southeast-asia':
-        return '🌏';
+        return 'globe';
       case 'south-asia':
-        return '🏝️';
+        return 'compass';
       case 'europe':
-        return '🇪🇺';
+        return 'building';
       case 'middle-east':
-        return '🕌';
+        return 'landmark';
       case 'americas':
-        return '🌎';
+        return 'globe';
       case 'africa':
-        return '🌍';
+        return 'globe';
       default:
-        return '🌍';
+        return 'globe';
     }
   };
 
@@ -324,9 +325,7 @@ export function StepDestination({ selectedSlugs, selectedName, onSelect }: StepD
                   )}
                 >
                   <div className="relative z-10">
-                    <span className="text-2xl mb-2 block">
-                      {getRegionEmoji(dest.regionSlug)}
-                    </span>
+                    <AnimatedIcon name={getRegionIcon(dest.regionSlug)} variant="card" className="mb-2" />
                     <span className="text-sm font-medium text-midnight block">{dest.name}</span>
                     <span className="text-xs text-stone">{dest.region}</span>
                     {dest.isInSeason && (

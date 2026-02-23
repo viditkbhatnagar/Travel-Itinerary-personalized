@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { LiquidButton } from '@/components/ui/liquid-button';
 import { HERO_IMAGES } from '@/lib/unsplash';
 
 export function HeroSection() {
@@ -56,12 +55,12 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.8 }}
           className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Button size="lg" variant="glass" className="bg-white/25 border-white/30 rounded-2xl" asChild>
-            <Link href="/destinations">Explore Destinations</Link>
-          </Button>
-          <Button size="lg" variant="glass" className="rounded-2xl" asChild>
-            <Link href="/itineraries">View Itineraries</Link>
-          </Button>
+          <LiquidButton size="lg" href="/destinations" className="text-white rounded-2xl">
+            Explore Destinations
+          </LiquidButton>
+          <LiquidButton size="lg" variant="outline" href="/itineraries" className="text-white rounded-2xl">
+            View Itineraries
+          </LiquidButton>
         </motion.div>
       </div>
 

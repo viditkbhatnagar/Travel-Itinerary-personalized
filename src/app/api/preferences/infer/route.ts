@@ -33,15 +33,29 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // ── Call AI inference ──────────────────────────────────────
-  const result = await inferPreferences(
-    events.map((e) => ({
-      eventType: e.eventType,
-      entityType: e.entityType,
-      metadata: e.metadata,
-      createdAt: e.createdAt,
-    }))
-  );
+  // ── Call AI inference (15s timeout to prevent Vercel timeout) ──
+  let result;
+  try {
+    result = await Promise.race([
+      inferPreferences(
+        events.map((e) => ({
+          eventType: e.eventType,
+          entityType: e.entityType,
+          metadata: e.metadata,
+          createdAt: e.createdAt,
+        }))
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 15_000)
+      ),
+    ]);
+  } catch {
+    return errorResponse(
+      504,
+      'Timeout',
+      'Preference inference timed out. Try again later.'
+    );
+  }
 
   if (!result) {
     return errorResponse(

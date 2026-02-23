@@ -23,6 +23,9 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
+  // Unsplash (optional — enables dynamic image search)
+  UNSPLASH_ACCESS_KEY: z.string().optional(),
+
   // Mapbox (optional)
   MAPBOX_ACCESS_TOKEN: z.string().optional(),
 
