@@ -93,7 +93,7 @@ export function VisaGlanceAnimated({ entries }: VisaGlanceAnimatedProps) {
                       alt={entry.country.name}
                       fill
                       sizes="320px"
-                      className="object-cover"
+                      className="object-cover brightness-[0.45] saturate-[1.15]"
                     />
 
                     {/* Dark gradient overlay for text readability */}
