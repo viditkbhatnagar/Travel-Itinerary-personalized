@@ -74,13 +74,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     travelHistory as unknown as TravelHistoryEntry[]
   );
 
-  // ── Generate explanation ───────────────────────────────────
-  const explanation = await explainRecommendation(
-    country.name,
-    country.tags,
-    profileContext,
-    historyContext
-  );
+  // ── Generate explanation (15s timeout to prevent Vercel timeout) ──
+  let explanation: string;
+  try {
+    explanation = await Promise.race([
+      explainRecommendation(country.name, country.tags, profileContext, historyContext),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 15_000)
+      ),
+    ]);
+  } catch {
+    explanation = `${country.name} is a fantastic destination that matches your travel preferences — known for ${country.tags.slice(0, 3).join(', ')}.`;
+  }
 
   return success({
     destinationSlug: country.slug,

@@ -8,6 +8,7 @@
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { fadeUp, tapSpring, staggerContainer } from '@/lib/animations';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface PaceOption {
   value: string;
@@ -51,9 +52,7 @@ export function PaceSelector({ options, selected, onSelect }: PaceSelectorProps)
             aria-pressed={isSelected}
           >
             {/* Icon */}
-            <span className="text-4xl leading-none" role="img" aria-hidden="true">
-              {option.icon}
-            </span>
+            <AnimatedIcon name={option.icon} variant="card" size="lg" selected={isSelected} />
 
             {/* Label */}
             <h3

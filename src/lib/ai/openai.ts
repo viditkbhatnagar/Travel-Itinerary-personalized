@@ -23,14 +23,20 @@ let client: OpenAI | null = null;
 
 function getClient(): OpenAI {
   if (!client) {
-    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 120_000, // 120s — GPT-5.2 reasoning phase can take 60-90s before first output token
+    });
   }
   return client;
 }
 
-const AI_MODEL = process.env.AI_MODEL ?? 'gpt-4o-mini';
-const AI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS ?? '4096', 10);
-const AI_MAX_TOKENS_ITINERARY = parseInt(process.env.AI_MAX_TOKENS_ITINERARY ?? '8192', 10);
+const AI_MODEL = process.env.AI_MODEL ?? 'gpt-5.2';
+// GPT-5.2 reasoning models: max_completion_tokens includes BOTH reasoning + output tokens.
+// With reasoning_effort 'high', reasoning can consume 70-90% of the budget.
+// Token budgets must be large enough so output tokens aren't starved.
+const AI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS ?? '16384', 10);
+const AI_MAX_TOKENS_ITINERARY = parseInt(process.env.AI_MAX_TOKENS_ITINERARY ?? '32768', 10);
 
 // ============================================================
 // System Prompts
@@ -109,11 +115,13 @@ ${dietaryNote}
 ${historyNote}
 
 ## RESPONSE FORMAT
-- Keep responses concise (3-5 sentences for quick questions, more for detailed planning)
+- Keep responses concise and conversational (3-5 sentences for quick questions, more for detailed planning)
 - Use bullet points for lists of recommendations
-- Include specific place names, estimated costs, and time durations
-- Format prices as ₹X,XXX
-- Use **bold** for emphasis on key information
+- Use **bold** for key info like place names, prices, and important tips
+- Use numbered lists (1. 2. 3.) when listing steps or ranked recommendations
+- Include specific place names, estimated costs in ₹X,XXX format, and time durations
+- Do NOT use markdown headings (#, ##, ###) — this is a chat, not a document
+- Do NOT wrap text in asterisks for no reason — only bold truly important words
 
 ## ITINERARY TRIGGER
 When the user confirms they want to generate an itinerary and you have: destination, duration, budget, style, and companions — respond with your normal message AND include at the very end:
@@ -123,21 +131,24 @@ When the user confirms they want to generate an itinerary and you have: destinat
 }
 
 function buildItinerarySystemPrompt(): string {
-  return `You are the Trails and Miles Itinerary Engine — the most sophisticated travel planner for Indian travellers.
+  return `You are the Trails and Miles Itinerary Engine — think of yourself as a seasoned tour guide with 20+ years of experience who has personally walked every street, eaten at every restaurant, and knows every hidden gem. You plan trips specifically for Indian travellers.
 
 OUTPUT: Respond ONLY with valid JSON. No explanations, no markdown, no additional text.
 
-ITINERARY INTELLIGENCE:
-1. FATIGUE CURVE — Day 1: light (jet lag recovery). Middle days: packed. Last day: shopping + relaxed
-2. MEAL ARCHITECTURE — Breakfast at hotel, lunch near attractions, dinner as an experience. Always include one vegetarian restaurant per day.
-3. TRANSPORT LOGIC — Morning activities clustered geographically. Minimize back-and-forth. Include actual transport modes (Grab/taxi costs, metro stations, walking distances)
-4. BUDGET DISTRIBUTION — 30% accommodation (excluded from items), 25% food, 25% activities, 10% transport, 10% shopping/buffer
-5. TIME REALISM — Include travel time between locations. Don't schedule 6 activities in 8 hours. Account for queues at popular spots.
-6. COMPANION DYNAMICS — Solo: street food + walking tours. Couple: romantic dinners + sunset spots. Family: kid-friendly + rest breaks. Friends: nightlife + group activities.
-7. WEATHER AWARENESS — Morning outdoor activities before heat. Indoor/museum time during peak afternoon heat. Evening outdoors after sunset.
-8. PHOTOGRAPHY WINDOWS — Golden hour spots for sunrise/sunset. Best viewpoints. Instagram-worthy locations.
-9. LOCAL IMMERSION — At least 1 non-touristy authentic local experience per day (local market, neighborhood walk, cooking class, home dining)
-10. SAFETY NOTES — Evening activity safety context. Areas to avoid. Scam awareness tips for Indian tourists.
+EXPERT TOUR GUIDE PRINCIPLES:
+1. FATIGUE CURVE — Day 1: light (jet lag recovery, nearby exploration). Middle days: packed with the best experiences. Last day: shopping + relaxed farewell dinner.
+2. MEAL ARCHITECTURE — Breakfast at hotel/nearby cafe. Lunch near attractions (name the EXACT restaurant, dish, and price). Dinner as a curated experience. ALWAYS include at least one verified vegetarian restaurant per day with specific dish recommendations.
+3. TRANSPORT LOGIC — Activities clustered geographically per half-day. Include EXACT transport: "Take BTS Sukhumvit Line from Asok to Saphan Taksin (₹50, 20 min)" not "take the metro". Mention Grab/Bolt costs, walking distances in minutes, which exit of a station.
+4. BUDGET PRECISION — Every cost in ₹ INR. Break down: entry fees, food costs per meal, transport per leg, tips. Be realistic — don't guess, be specific from your knowledge.
+5. TIME REALISM — Account for queues (e.g., "Arrive by 8:30 AM to avoid 45-min queue at Grand Palace"). Include travel time BETWEEN locations. Never schedule more than 3-4 major activities per day.
+6. COMPANION DYNAMICS — Solo: street food crawls + walking tours + safe evening spots. Couple: rooftop dinners + sunset viewpoints + spa. Family: kid-friendly timings + rest breaks + no late nights. Friends: nightlife + group activities + adventure.
+7. INSIDER KNOWLEDGE — Every item MUST have a specific insider tip. Not "visit the temple" but "Enter from the east gate (less crowded), the best photo spot is from the third-floor balcony at 4 PM when the light hits the golden spire."
+8. FOOD INTELLIGENCE — Name REAL restaurants/street food stalls. Example: "Lunch at Bun Cha Huong Lien (Obama's bun cha spot), 24 Le Van Huu — order Bun Cha (₹200) + fresh spring rolls (₹80). Vegetarians: try Nha Hang Chay at 79 Tran Hung Dao for mock-meat pho (₹150)."
+9. SAFETY & SCAM ALERTS — Specific warnings: "Refuse the 'free' bracelet sellers at Wat Pho — it's a scam. Tuk-tuks near Grand Palace quote 10x — use Grab instead." Include evening safety context for solo female Indian travellers.
+10. LOCAL IMMERSION — At least 1 off-the-beaten-path experience per day: cooking class with a local family, morning market where locals shop (not tourists), a neighborhood only locals know about.
+11. WEATHER & TIMING — "Visit Halong Bay in morning when fog lifts for dramatic photos. Skip outdoor Angkor Wat at 1-3 PM (40°C heat). Best sunset at Maya Bay is 5:15 PM in February."
+12. INDIAN TRAVELLER SPECIFICS — Indian SIM card availability, UPI/card acceptance, nearest Indian restaurant for homesick days, vegetarian survival guide, spice-level notes, drinking water safety, power adapter type.
+13. DO's AND DON'Ts — For EACH destination, include cultural do's and don'ts: dress codes for temples, tipping norms, bargaining etiquette, photography restrictions, local customs to respect.
 
 JSON STRUCTURE:
 {
@@ -165,15 +176,15 @@ JSON STRUCTURE:
       "startTime": "HH:MM (optional)",
       "endTime": "HH:MM (optional)",
       "title": "string",
-      "description": "string (2-3 sentences with insider tip)",
+      "description": "string (2-3 sentences with SPECIFIC insider tip — name real places, exact prices, exact directions)",
       "estimatedCostINR": number,
       "transportMode": "walking|taxi|tuk-tuk|bus|train|ferry|motorbike|metro (optional)",
       "transportDurationMins": number (optional),
-      "transportNotes": "string (optional)",
+      "transportNotes": "string (EXACT directions: station name, line, exit number, Grab cost, walking mins)",
       "tags": ["string"],
       "poiSlug": "string (optional, if matches a known POI)",
       "isVegetarianFriendly": boolean (optional),
-      "insiderTip": "string (optional)"
+      "insiderTip": "string (REQUIRED — a specific tip only a local guide would know)"
     }]
   }]
 }`;
@@ -336,6 +347,7 @@ export async function sendChatMessage(context: ChatContext, userMessage: string)
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: AI_MAX_TOKENS,
+    reasoning_effort: 'high',
     messages: buildMessages(fullSystem, conversationMessages),
   });
 
@@ -379,6 +391,7 @@ export async function streamChatMessage(
         const openaiStream = await openai.chat.completions.create({
           model: AI_MODEL,
           max_completion_tokens: AI_MAX_TOKENS,
+          reasoning_effort: 'high',
           messages: buildMessages(fullSystem, conversationMessages),
           stream: true,
         });
@@ -444,34 +457,10 @@ export interface ItineraryGenerationInput {
   destinationContext: string;
 }
 
-export async function generateItinerary(
-  input: ItineraryGenerationInput
-): Promise<GeneratedItinerary> {
-  const maxRetries = 2;
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await _generateItineraryAttempt(input);
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < maxRetries) {
-        console.warn(`[Itinerary] Attempt ${attempt + 1} failed, retrying...`, lastError.message);
-      }
-    }
-  }
-
-  throw lastError ?? new Error('Itinerary generation failed after retries');
-}
-
-async function _generateItineraryAttempt(
-  input: ItineraryGenerationInput
-): Promise<GeneratedItinerary> {
-  const openai = getClient();
-
+function buildItineraryUserPrompt(input: ItineraryGenerationInput): string {
   const visitedDestinations = input.travelHistory.map((h) => h.destination.name);
 
-  const userRequest = `Generate a ${input.durationDays}-day itinerary for: ${input.destinationSlugs.join(', ')}
+  return `Generate a ${input.durationDays}-day itinerary for: ${input.destinationSlugs.join(', ')}
 
 Parameters:
 - Travel Style: ${input.travelStyle ?? input.userProfile?.defaultTravelStyle ?? 'LEISURE'}
@@ -484,21 +473,63 @@ ${visitedDestinations.length ? `- Already visited (exclude unless asked): ${visi
 
 Use the destination data provided in the system context. Generate POI slugs where they match known points of interest.
 Output ONLY the JSON object.`;
+}
 
+export async function generateItinerary(
+  input: ItineraryGenerationInput
+): Promise<GeneratedItinerary> {
+  const openai = getClient();
   const systemWithContext = `${buildItinerarySystemPrompt()}\n\n${input.destinationContext}`;
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
     max_completion_tokens: AI_MAX_TOKENS_ITINERARY,
-    messages: buildMessages(systemWithContext, [{ role: 'user', content: userRequest }]),
+    reasoning_effort: 'high',
+    messages: buildMessages(systemWithContext, [{ role: 'user', content: buildItineraryUserPrompt(input) }]),
   });
 
   const text = response.choices[0]?.message?.content;
-  if (!text) {
-    throw new Error('No text response from itinerary generator');
+  if (!text) throw new Error('No text response from itinerary generator');
+  return parseJSONResponse<GeneratedItinerary>(text);
+}
+
+/**
+ * Streaming itinerary generation — sends heartbeat SSE events while OpenAI
+ * generates the JSON, keeping the Vercel connection alive.
+ * Returns the parsed itinerary once complete.
+ */
+export async function generateItineraryStreaming(
+  input: ItineraryGenerationInput,
+  onProgress: (event: string) => void
+): Promise<GeneratedItinerary> {
+  const openai = getClient();
+  const systemWithContext = `${buildItinerarySystemPrompt()}\n\n${input.destinationContext}`;
+
+  const stream = await openai.chat.completions.create({
+    model: AI_MODEL,
+    max_completion_tokens: AI_MAX_TOKENS_ITINERARY,
+    reasoning_effort: 'high',
+    messages: buildMessages(systemWithContext, [{ role: 'user', content: buildItineraryUserPrompt(input) }]),
+    stream: true,
+  });
+
+  let fullText = '';
+  let chunkCount = 0;
+
+  for await (const chunk of stream) {
+    const text = chunk.choices[0]?.delta?.content;
+    if (text) {
+      fullText += text;
+      chunkCount++;
+      // Send heartbeat every 10 chunks to keep connection alive
+      if (chunkCount % 10 === 0) {
+        onProgress(JSON.stringify({ stage: 'generating', progress: chunkCount }));
+      }
+    }
   }
 
-  return parseJSONResponse<GeneratedItinerary>(text);
+  if (!fullText) throw new Error('No text response from itinerary generator');
+  return parseJSONResponse<GeneratedItinerary>(fullText);
 }
 
 // ============================================================
@@ -550,7 +581,8 @@ Output ONLY a JSON array:
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 1024,
+    max_completion_tokens: 8192, // reasoning models need headroom for thinking + output
+    reasoning_effort: 'medium',
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -623,7 +655,8 @@ Output ONLY a JSON array of up to 10 recommendations:
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 1024,
+    max_completion_tokens: 8192, // reasoning models need headroom for thinking + output
+    reasoning_effort: 'medium',
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -667,7 +700,8 @@ Output format: ["tag1", "tag2", ...]`;
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 1024,
+    max_completion_tokens: 4096,
+    reasoning_effort: 'medium',
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -719,7 +753,8 @@ Return JSON:
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 1024,
+    max_completion_tokens: 4096,
+    reasoning_effort: 'medium',
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -745,7 +780,7 @@ export async function detectIntent(
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 256,
+    max_completion_tokens: 2048,
     reasoning_effort: 'low',
     messages: [
       {
@@ -838,8 +873,8 @@ export async function explainRecommendation(
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 512,
-    reasoning_effort: 'low',
+    max_completion_tokens: 4096,
+    reasoning_effort: 'medium',
     messages: [
       {
         role: 'user',
@@ -914,11 +949,12 @@ Return ONLY valid JSON with this structure:
 
   const response = await openai.chat.completions.create({
     model: AI_MODEL,
-    max_completion_tokens: 2048,
+    max_completion_tokens: 16384,
+    reasoning_effort: 'high',
     messages: [
       {
         role: 'system',
-        content: `You are a travel encyclopedia specializing in destinations for Indian travellers. 
+        content: `You are a travel encyclopedia specializing in destinations for Indian travellers.
 Provide accurate, up-to-date travel information. Be specific with costs in INR.
 For visa information, always reference requirements for Indian passport holders.
 If you're unsure about specific details, provide reasonable estimates based on similar destinations.`,

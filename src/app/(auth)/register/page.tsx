@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { LiquidButton } from '@/components/ui/liquid-button';
 import { Input } from '@/components/ui/input';
 
 // ---------------------------------------------------------------------------
@@ -198,9 +199,9 @@ export default function RegisterPage() {
           </div>
 
           {/* Submit */}
-          <Button type="submit" className="w-full" loading={isSubmitting}>
+          <LiquidButton type="submit" className="w-full" loading={isSubmitting}>
             Create Account
-          </Button>
+          </LiquidButton>
         </form>
 
         {/* Divider */}

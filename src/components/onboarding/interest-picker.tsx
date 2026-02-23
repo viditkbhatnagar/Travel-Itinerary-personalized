@@ -8,6 +8,7 @@
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { fadeUp, tapSpring, staggerContainer } from '@/lib/animations';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface Interest {
   value: string;
@@ -84,9 +85,7 @@ export function InterestPicker({
               )}
               aria-pressed={isSelected}
             >
-              <span role="img" aria-hidden="true" className="text-base leading-none">
-                {interest.icon}
-              </span>
+              <AnimatedIcon name={interest.icon} variant="inline" selected={isSelected} />
               <span className={cn('font-medium', isSelected && 'text-white')}>
                 {interest.label}
               </span>

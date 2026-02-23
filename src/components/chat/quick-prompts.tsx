@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { QUICK_PROMPTS } from '@/lib/constants';
 import { fadeUp, staggerContainer } from '@/lib/animations';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface QuickPromptsProps {
   onSelect: (message: string) => void;
@@ -28,7 +29,7 @@ export function QuickPrompts({ onSelect }: QuickPromptsProps) {
             className="neu-raised rounded-xl px-4 py-3 text-left hover:shadow-card-hover transition-shadow group"
           >
             <div className="flex items-center gap-3">
-              <span className="text-lg">{prompt.icon}</span>
+              <AnimatedIcon name={prompt.icon} variant="card" size="sm" />
               <span className="text-sm font-medium text-midnight group-hover:text-forest transition-colors">
                 {prompt.label}
               </span>

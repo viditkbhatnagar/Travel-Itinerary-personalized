@@ -9,6 +9,7 @@
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { fadeUp, tapSpring, staggerContainer } from '@/lib/animations';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface DietaryOption {
   value: string;
@@ -51,9 +52,7 @@ export function DietarySelector({ options, selected, onToggle }: DietarySelector
               )}
               aria-pressed={isSelected}
             >
-              <span role="img" aria-hidden="true" className="text-lg leading-none">
-                {option.icon}
-              </span>
+              <AnimatedIcon name={option.icon} variant="inline" selected={isSelected} />
               <span className="font-medium">{option.label}</span>
 
               {/* Animated selection indicator */}

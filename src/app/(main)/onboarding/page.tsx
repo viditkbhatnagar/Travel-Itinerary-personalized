@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { LiquidButton } from '@/components/ui/liquid-button';
 import { ArchetypeCard } from '@/components/onboarding/archetype-card';
 import { PaceSelector } from '@/components/onboarding/pace-selector';
 import { BudgetSlider } from '@/components/onboarding/budget-slider';
@@ -236,25 +237,25 @@ export default function OnboardingPage() {
           </motion.button>
 
           {currentStep < totalSteps ? (
-            <motion.button
-              {...tapSpring}
+            <LiquidButton
+              size="lg"
               onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
               disabled={!canProceed()}
-              className="flex items-center gap-2 rounded-xl bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-glow-green"
             >
               Continue
               <ArrowRight className="h-4 w-4" />
-            </motion.button>
+            </LiquidButton>
           ) : (
-            <motion.button
-              {...tapSpring}
+            <LiquidButton
+              size="lg"
+              variant="secondary"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex items-center gap-2 rounded-xl bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest/90 transition-colors disabled:opacity-40 shadow-glow-green"
+              loading={isSubmitting}
             >
               <Sparkles className="h-4 w-4" />
-              {isSubmitting ? 'Saving...' : 'Complete Setup'}
-            </motion.button>
+              Complete Setup
+            </LiquidButton>
           )}
         </div>
       </div>

@@ -66,7 +66,7 @@ export function useChat() {
         addMessage({
           id: `welcome-${data.id}`,
           role: 'assistant',
-          content: `Namaste! 🙏 I'm MILES, your AI travel companion at Trails and Miles. I'm here to help you plan the perfect trip — personalized for Indian travellers like you.\n\nTell me where you'd like to go, and I'll help with:\n• **Itinerary planning** with day-wise activities\n• **Visa requirements** for your Indian passport\n• **Budget estimates** in INR\n• **Vegetarian food** options and restaurants\n• **Practical tips** on SIM cards, local transport, and more\n\nSo, where are you dreaming of travelling? 🌏`,
+          content: `Namaste! I'm MILES, your AI travel companion at Trails and Miles. I'm here to help you plan the perfect trip — personalized for Indian travellers like you.\n\nTell me where you'd like to go, and I'll help with:\n• **Itinerary planning** with day-wise activities\n• **Visa requirements** for your Indian passport\n• **Budget estimates** in INR\n• **Vegetarian food** options and restaurants\n• **Practical tips** on SIM cards, local transport, and more\n\nSo, where are you dreaming of travelling?`,
           createdAt: new Date(),
         });
 

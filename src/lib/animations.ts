@@ -81,3 +81,29 @@ export const cardHover = {
   whileHover: { y: -4, boxShadow: '12px 12px 24px rgba(0,0,0,0.1), -12px -12px 24px rgba(255,255,255,0.95)' },
   transition: smoothEase,
 };
+
+// ── ICON-SPECIFIC VARIANTS ──────────────────────────────────
+
+export const icon3dEntrance: Variants = {
+  hidden: { opacity: 0, scale: 0.7, y: 8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 22,
+      mass: 0.8,
+    },
+  },
+};
+
+export const iconInlineEntrance: Variants = {
+  hidden: { opacity: 0, scale: 0.85 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+  },
+};

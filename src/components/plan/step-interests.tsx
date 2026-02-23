@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { fadeUp, staggerContainer, tapSpring } from '@/lib/animations';
 import { INTEREST_TAGS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { AnimatedIcon } from '@/components/ui/animated-icon';
 
 interface StepInterestsProps {
   interests: string[];
@@ -59,7 +60,7 @@ export function StepInterests({
                     : 'neu-raised text-midnight hover:shadow-card-hover'
               )}
             >
-              <span className="mr-1.5">{tag.icon}</span>
+              <AnimatedIcon name={tag.icon} variant="inline" selected={isSelected} className="mr-1" />
               {tag.label}
             </motion.button>
           );

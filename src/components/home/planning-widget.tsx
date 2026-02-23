@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { LiquidButton } from '@/components/ui/liquid-button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
@@ -72,7 +72,7 @@ export function PlanningWidget() {
             </Select>
           </div>
           <div className="flex items-end">
-            <Button
+            <LiquidButton
               className="w-full h-12"
               size="lg"
               variant="secondary"
@@ -80,7 +80,7 @@ export function PlanningWidget() {
             >
               <Sparkles className="h-4 w-4 mr-2" />
               Plan Trip
-            </Button>
+            </LiquidButton>
           </div>
         </div>
       </div>

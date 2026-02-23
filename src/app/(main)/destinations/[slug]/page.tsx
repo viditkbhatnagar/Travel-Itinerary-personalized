@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Globe, Shield, Wallet, Train } from 'lucide-react';
+import { MapPin, Globe, Shield, Wallet } from 'lucide-react';
 import { getCountryBySlug } from '@/lib/data/destinations';
-import { resolveImage, getDestinationImage } from '@/lib/unsplash';
+import { resolveImage, getDestinationImage, getDestinationGalleryAsync } from '@/lib/unsplash';
+import { fetchCityCardImage } from '@/lib/services/unsplash-api';
+import { HeroCarousel } from '@/components/shared/hero-carousel';
 import { formatINR } from '@/lib/utils';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { CityCard } from '@/components/shared/city-card';
@@ -13,6 +14,7 @@ import { ItineraryCard } from '@/components/shared/itinerary-card';
 import { ScrollReveal } from '@/components/shared/scroll-reveal';
 import { SectionHeader } from '@/components/shared/section-header';
 import { Button } from '@/components/ui/button';
+import { LiquidButton } from '@/components/ui/liquid-button';
 import { RegionExplorer } from '@/components/india/region-explorer';
 import { FoodGuide } from '@/components/india/food-guide';
 import { FestivalBanner } from '@/components/shared/festival-banner';
@@ -39,31 +41,53 @@ export default async function CountryPage({ params }: Props) {
   if (!country) notFound();
 
   const heroImage = resolveImage(country.heroImageUrl, getDestinationImage(slug, 'hero'));
+  const galleryImages = await getDestinationGalleryAsync(country.name, slug);
+  const heroImages = galleryImages.length > 0 ? galleryImages : [heroImage];
   const visa = country.visaInfo?.[0];
   const visaFees = visa?.fees as { inrApprox?: number } | null;
+
+  // Resolve city card images via Unsplash API (parallel)
+  const cityImageResults = await Promise.all(
+    country.cities.map(async (city) => {
+      const apiImage = await fetchCityCardImage(city.name, country.name);
+      return { slug: city.slug, imageUrl: apiImage };
+    }),
+  );
+  const cityImageMap = new Map(
+    cityImageResults.filter((r) => r.imageUrl).map((r) => [r.slug, r.imageUrl!]),
+  );
+
+  // Augment cities with API-resolved images (overrides broken DB URLs)
+  const citiesWithImages = country.cities.map((city) => ({
+    ...city,
+    heroImageUrl: cityImageMap.get(city.slug) ?? city.heroImageUrl,
+  }));
 
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-[50vh] min-h-[400px]">
-        <Image src={heroImage} alt={country.name} fill priority sizes="100vw" className="object-cover" />
-        <div className="absolute inset-0 gradient-hero" />
-        <div className="absolute inset-0 flex flex-col justify-end pb-12 px-4">
-          <div className="mx-auto max-w-7xl w-full">
-            <Breadcrumb
-              items={[
-                { label: 'Destinations', href: '/destinations' },
-                { label: country.name },
-              ]}
-              className="mb-4 text-white/70 [&_a]:text-white/70 [&_a:hover]:text-white"
-            />
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-white">{country.name}</h1>
-            {country.region && (
-              <p className="mt-2 text-white/70">{country.region.name}</p>
-            )}
+      <HeroCarousel
+        images={heroImages}
+        alt={country.name}
+        height="h-[50vh] min-h-[400px]"
+        overlay={
+          <div className="absolute inset-0 z-[3] flex flex-col justify-end pb-12 px-4">
+            <div className="mx-auto max-w-7xl w-full">
+              <Breadcrumb
+                items={[
+                  { label: 'Destinations', href: '/destinations' },
+                  { label: country.name },
+                ]}
+                className="mb-4 text-white/70 [&_a]:text-white/70 [&_a:hover]:text-white"
+              />
+              <h1 className="font-display text-4xl sm:text-5xl font-bold text-white">{country.name}</h1>
+              {country.region && (
+                <p className="mt-2 text-white/70">{country.region.name}</p>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Quick Facts Bar */}
       <div className="relative z-10 -mt-8 mx-auto max-w-7xl px-4">
@@ -117,10 +141,10 @@ export default async function CountryPage({ params }: Props) {
               />
             </ScrollReveal>
             {slug === 'india' ? (
-              <RegionExplorer cities={country.cities} countrySlug={slug} />
+              <RegionExplorer cities={citiesWithImages} countrySlug={slug} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {country.cities.map((city, i) => (
+                {citiesWithImages.map((city, i) => (
                   <ScrollReveal key={city.id} delay={i * 0.1}>
                     <CityCard
                       name={city.name}
@@ -225,9 +249,9 @@ export default async function CountryPage({ params }: Props) {
               Ready for {country.name}?
             </h2>
             <p className="text-stone mb-6">Plan your perfect trip with AI-powered itineraries</p>
-            <Button size="lg" asChild>
-              <Link href="/itineraries">Create Your Itinerary</Link>
-            </Button>
+            <LiquidButton size="lg" href="/plan">
+              Create Your Itinerary
+            </LiquidButton>
           </div>
         </ScrollReveal>
       </div>

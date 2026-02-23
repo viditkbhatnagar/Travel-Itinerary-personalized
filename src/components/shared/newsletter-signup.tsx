@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send } from 'lucide-react';
+import { MetalButton } from '@/components/ui/metal-button';
 import { cn } from '@/lib/utils';
 
 interface NewsletterSignupProps {
@@ -43,18 +44,13 @@ export function NewsletterSignup({ className, variant = 'light' }: NewsletterSig
             : 'neu-input focus:ring-forest-300'
         )}
       />
-      <button
+      <MetalButton
         type="submit"
-        className={cn(
-          'h-11 px-5 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors',
-          variant === 'dark'
-            ? 'bg-white text-forest hover:bg-white/90'
-            : 'bg-forest text-white hover:bg-forest-600'
-        )}
+        variant={variant === 'dark' ? 'default' : 'primary'}
       >
         Subscribe
-        <Send className="h-4 w-4" />
-      </button>
+        <Send className="h-4 w-4 ml-1" />
+      </MetalButton>
     </form>
   );
 }

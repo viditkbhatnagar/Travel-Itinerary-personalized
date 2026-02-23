@@ -1,5 +1,7 @@
 'use client';
 
+import { memo } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Bot, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -72,56 +74,88 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
   );
 }
 
-// ── Render message with basic markdown ───────────────────────
+// ── Render message with react-markdown ───────────────────────
 
-function MessageContent({ content }: { content: string }) {
-  // Simple markdown: bold, bullet points, price formatting
-  const lines = content.split('\n');
-
+const MessageContent = memo(function MessageContent({ content }: { content: string }) {
   return (
-    <div className="space-y-1.5">
-      {lines.map((line, i) => {
-        if (!line.trim()) return <br key={i} />;
-
-        // Bullet points
-        if (line.match(/^[•\-\*]\s/)) {
+    <ReactMarkdown
+      components={{
+        h1: ({ children }) => (
+          <h3 className="text-base font-semibold text-midnight mt-2 mb-1">{children}</h3>
+        ),
+        h2: ({ children }) => (
+          <h4 className="text-sm font-semibold text-midnight mt-2 mb-1">{children}</h4>
+        ),
+        h3: ({ children }) => (
+          <h5 className="text-sm font-semibold text-midnight mt-1.5 mb-0.5">{children}</h5>
+        ),
+        p: ({ children }) => (
+          <p className="mb-1.5 last:mb-0">{children}</p>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-semibold text-midnight">{children}</strong>
+        ),
+        em: ({ children }) => (
+          <em className="italic text-stone">{children}</em>
+        ),
+        ul: ({ children }) => (
+          <ul className="space-y-1 my-1.5">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="space-y-1 my-1.5 list-decimal pl-4">{children}</ol>
+        ),
+        li: ({ children, ...props }) => {
+          // Check if parent is an ordered list by looking for the `ordered` prop
+          const isOrdered = (props as Record<string, unknown>).ordered;
+          if (isOrdered) {
+            return <li className="pl-1">{children}</li>;
+          }
           return (
-            <div key={i} className="flex gap-2">
-              <span className="text-forest shrink-0">•</span>
-              <span>{renderInline(line.replace(/^[•\-\*]\s/, ''))}</span>
-            </div>
+            <li className="flex gap-1.5 items-start list-none">
+              <span className="text-forest shrink-0 mt-0.5 text-xs">&#9679;</span>
+              <span className="flex-1">{children}</span>
+            </li>
           );
-        }
-
-        return <p key={i}>{renderInline(line)}</p>;
-      })}
-    </div>
+        },
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-forest underline underline-offset-2 hover:text-forest/80"
+          >
+            {children}
+          </a>
+        ),
+        code: ({ children, className }) => {
+          const isBlock = className?.includes('language-');
+          if (isBlock) {
+            return (
+              <code className="block bg-midnight/5 rounded-lg p-2.5 my-1.5 text-xs font-mono overflow-x-auto">
+                {children}
+              </code>
+            );
+          }
+          return (
+            <code className="bg-midnight/5 rounded px-1 py-0.5 text-xs font-mono">
+              {children}
+            </code>
+          );
+        },
+        pre: ({ children }) => (
+          <pre className="my-1.5">{children}</pre>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-forest/30 pl-3 my-1.5 text-stone italic">
+            {children}
+          </blockquote>
+        ),
+        hr: () => (
+          <hr className="border-midnight/10 my-2" />
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   );
-}
-
-function renderInline(text: string) {
-  // Bold text
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={i} className="font-semibold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    // Price formatting — highlight ₹ amounts
-    const priceRegex = /(₹[\d,]+)/g;
-    const priceParts = part.split(priceRegex);
-    return priceParts.map((pp, j) => {
-      if (pp.match(priceRegex)) {
-        return (
-          <span key={`${i}-${j}`} className="font-mono text-forest font-medium">
-            {pp}
-          </span>
-        );
-      }
-      return pp;
-    });
-  });
-}
+});

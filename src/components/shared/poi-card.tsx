@@ -1,10 +1,11 @@
 import Image from 'next/image';
 import { Clock, IndianRupee } from 'lucide-react';
 import { cn, formatINR } from '@/lib/utils';
-import { getCategoryImage } from '@/lib/unsplash';
+import { getCategoryImage, getPOIImage } from '@/lib/unsplash';
 
 interface POICardProps {
   name: string;
+  slug?: string;
   category: string;
   subcategory?: string | null;
   shortDescription?: string | null;
@@ -15,8 +16,12 @@ interface POICardProps {
   className?: string;
 }
 
-export function POICard({ name, category, subcategory, shortDescription, heroImageUrl, avgDurationMins, avgCostINR, bestTimeToVisit, className }: POICardProps) {
-  const image = heroImageUrl && heroImageUrl.startsWith('http') ? heroImageUrl : getCategoryImage(category);
+export function POICard({ name, slug, category, subcategory, shortDescription, heroImageUrl, avgDurationMins, avgCostINR, bestTimeToVisit, className }: POICardProps) {
+  // 3-tier fallback: DB image → POI-specific mapping → category generic
+  const image =
+    (heroImageUrl?.startsWith('http') ? heroImageUrl : null)
+    ?? (slug ? getPOIImage(slug) : null)
+    ?? getCategoryImage(category);
 
   return (
     <div className={cn('neu-raised overflow-hidden group', className)}>

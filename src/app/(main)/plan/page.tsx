@@ -4,6 +4,7 @@ import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { LiquidButton } from '@/components/ui/liquid-button';
 import { useItineraryBuilder } from '@/lib/hooks/use-itinerary-builder';
 import { WizardProgressBar } from '@/components/plan/wizard-progress-bar';
 import { StepDestination } from '@/components/plan/step-destination';
@@ -204,25 +205,24 @@ function PlanPageContent() {
           </motion.button>
 
           {currentStep < 6 ? (
-            <motion.button
-              {...tapSpring}
+            <LiquidButton
+              size="lg"
               onClick={nextStep}
               disabled={!canProceed()}
-              className="flex items-center gap-2 rounded-xl bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-glow-green"
             >
               Continue
               <ArrowRight className="h-4 w-4" />
-            </motion.button>
+            </LiquidButton>
           ) : (
-            <motion.button
-              {...tapSpring}
+            <LiquidButton
+              size="lg"
+              variant="secondary"
               onClick={generateItinerary}
               disabled={!canProceed()}
-              className="flex items-center gap-2 rounded-xl bg-forest px-6 py-3 text-sm font-semibold text-white hover:bg-forest/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-glow-green"
             >
               <Sparkles className="h-4 w-4" />
               Generate Itinerary
-            </motion.button>
+            </LiquidButton>
           )}
         </div>
       </div>
